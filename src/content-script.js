@@ -673,7 +673,7 @@ function setStatus(message, isError = false) {
 }
 
 // Transform GraphQL response to cluster data format
-function transformToClusterData(response) {
+function transformToClusterData(response, requestedClusterId = null) {
   try {
     debugLog('Transforming GraphQL response to cluster data format', response);
     let clusterData = null;
@@ -685,16 +685,56 @@ function transformToClusterData(response) {
       // Check for prsn_deduplicationClusters format
       if (response[0].data.prsn_deduplicationClusters) {
         clusterData = response[0].data.prsn_deduplicationClusters;
+        
+        // If we have a requested cluster ID, verify this is the right cluster
+        if (requestedClusterId &&
+            clusterData.edges &&
+            clusterData.edges.length > 0 &&
+            clusterData.edges[0].node &&
+            clusterData.edges[0].node.id !== requestedClusterId) {
+          debugLog(`Skipping cluster ${clusterData.edges[0].node.id} - doesn't match requested ID ${requestedClusterId}`);
+          return null;
+        }
       }
       // Check for deduplicationClusters format
       else if (response[0].data.deduplicationClusters) {
         clusterData = response[0].data.deduplicationClusters;
+        
+        // If we have a requested cluster ID, verify this is the right cluster
+        if (requestedClusterId &&
+            clusterData.edges &&
+            clusterData.edges.length > 0 &&
+            clusterData.edges[0].node &&
+            clusterData.edges[0].node.id !== requestedClusterId) {
+          debugLog(`Skipping cluster ${clusterData.edges[0].node.id} - doesn't match requested ID ${requestedClusterId}`);
+          return null;
+        }
       }
     }
     
     // Handle captureResponseBody message with getPersonClusterDetails
     if (!clusterData && response.action === 'captureResponseBody') {
       debugLog('Processing captureResponseBody message');
+      
+      // If we have a requested cluster ID, check if this response is for that cluster
+      if (requestedClusterId &&
+          response.requestBody &&
+          Array.isArray(response.requestBody)) {
+        let matchesRequestedId = false;
+        for (const item of response.requestBody) {
+          if (item.operationName === 'getPersonClusterDetails' &&
+              item.variables &&
+              item.variables.id === requestedClusterId) {
+            matchesRequestedId = true;
+            break;
+          }
+        }
+        
+        if (!matchesRequestedId) {
+          debugLog(`Skipping captureResponseBody - doesn't match requested ID ${requestedClusterId}`);
+          return null;
+        }
+      }
       
       // Check if we have a responseBody in the message
       if (response.data && response.data.responseBody) {
@@ -730,6 +770,12 @@ function transformToClusterData(response) {
       if (!clusterData && response.requestBody && Array.isArray(response.requestBody)) {
         for (const item of response.requestBody) {
           if (item.operationName === 'getPersonClusterDetails' && item.variables && item.variables.id) {
+            // If we have a requested cluster ID, verify this is the right operation
+            if (requestedClusterId && item.variables.id !== requestedClusterId) {
+              debugLog(`Skipping getPersonClusterDetails operation with ID ${item.variables.id} - doesn't match requested ID ${requestedClusterId}`);
+              continue;
+            }
+            
             debugLog('Processing getPersonClusterDetails operation with ID:', item.variables.id);
             
             // Try to find the response data in window.allGraphQLResponses
@@ -738,18 +784,44 @@ function transformToClusterData(response) {
                 // Check if it's a direct GraphQL response
                 if (Array.isArray(graphqlResponse) && graphqlResponse.length > 0 && graphqlResponse[0].data) {
                   if (graphqlResponse[0].data.prsn_deduplicationClusters) {
-                    clusterData = graphqlResponse[0].data.prsn_deduplicationClusters;
+                    // If we have a requested cluster ID, verify this is the right cluster
+                    const potentialClusterData = graphqlResponse[0].data.prsn_deduplicationClusters;
+                    if (requestedClusterId &&
+                        potentialClusterData.edges &&
+                        potentialClusterData.edges.length > 0 &&
+                        potentialClusterData.edges[0].node &&
+                        potentialClusterData.edges[0].node.id !== requestedClusterId) {
+                      continue;
+                    }
+                    
+                    clusterData = potentialClusterData;
                     break;
                   }
                 }
                 // Check if it's a response with data property
                 else if (graphqlResponse.data) {
                   if (graphqlResponse.data.prsn_deduplicationClusters) {
-                    clusterData = graphqlResponse.data.prsn_deduplicationClusters;
+                    // If we have a requested cluster ID, verify this is the right cluster
+                    const potentialClusterData = graphqlResponse.data.prsn_deduplicationClusters;
+                    if (requestedClusterId &&
+                        potentialClusterData.edges &&
+                        potentialClusterData.edges.length > 0 &&
+                        potentialClusterData.edges[0].node &&
+                        potentialClusterData.edges[0].node.id !== requestedClusterId) {
+                      continue;
+                    }
+                    
+                    clusterData = potentialClusterData;
                     break;
                   } else if (graphqlResponse.data.person && graphqlResponse.data.person.deduplicationCluster) {
+                    // If we have a requested cluster ID, verify this is the right cluster
+                    const potentialCluster = graphqlResponse.data.person.deduplicationCluster;
+                    if (requestedClusterId && potentialCluster.id !== requestedClusterId) {
+                      continue;
+                    }
+                    
                     clusterData = {
-                      edges: [{ node: graphqlResponse.data.person.deduplicationCluster }]
+                      edges: [{ node: potentialCluster }]
                     };
                     break;
                   }
@@ -758,7 +830,17 @@ function transformToClusterData(response) {
                 else if (graphqlResponse.responseBody) {
                   const respBody = graphqlResponse.responseBody;
                   if (respBody.data && respBody.data.prsn_deduplicationClusters) {
-                    clusterData = respBody.data.prsn_deduplicationClusters;
+                    // If we have a requested cluster ID, verify this is the right cluster
+                    const potentialClusterData = respBody.data.prsn_deduplicationClusters;
+                    if (requestedClusterId &&
+                        potentialClusterData.edges &&
+                        potentialClusterData.edges.length > 0 &&
+                        potentialClusterData.edges[0].node &&
+                        potentialClusterData.edges[0].node.id !== requestedClusterId) {
+                      continue;
+                    }
+                    
+                    clusterData = potentialClusterData;
                     break;
                   }
                 }
@@ -780,14 +862,37 @@ function transformToClusterData(response) {
     if (!clusterData && Array.isArray(response)) {
       for (const item of response) {
         if (item.data && item.data.prsn_deduplicationClusters) {
-          clusterData = item.data.prsn_deduplicationClusters;
+          const potentialClusterData = item.data.prsn_deduplicationClusters;
+          
+          // If we have a requested cluster ID, verify this is the right cluster
+          if (requestedClusterId &&
+              potentialClusterData.edges &&
+              potentialClusterData.edges.length > 0 &&
+              potentialClusterData.edges[0].node &&
+              potentialClusterData.edges[0].node.id !== requestedClusterId) {
+            continue;
+          }
+          
+          clusterData = potentialClusterData;
           break;
         }
       }
     }
     // Handle single response object
     else if (!clusterData && response.data && response.data.prsn_deduplicationClusters) {
-      clusterData = response.data.prsn_deduplicationClusters;
+      const potentialClusterData = response.data.prsn_deduplicationClusters;
+      
+      // If we have a requested cluster ID, verify this is the right cluster
+      if (requestedClusterId &&
+          potentialClusterData.edges &&
+          potentialClusterData.edges.length > 0 &&
+          potentialClusterData.edges[0].node &&
+          potentialClusterData.edges[0].node.id !== requestedClusterId) {
+        debugLog(`Skipping cluster ${potentialClusterData.edges[0].node.id} - doesn't match requested ID ${requestedClusterId}`);
+        return null;
+      }
+      
+      clusterData = potentialClusterData;
     }
     
     if (!clusterData || !clusterData.edges || !clusterData.edges.length) {
@@ -800,6 +905,12 @@ function transformToClusterData(response) {
     
     if (!cluster) {
       debugLog('Invalid cluster structure', cluster);
+      return null;
+    }
+    
+    // Final check for requested cluster ID
+    if (requestedClusterId && cluster.id !== requestedClusterId) {
+      debugLog(`Skipping cluster ${cluster.id} - doesn't match requested ID ${requestedClusterId}`);
       return null;
     }
     
@@ -840,6 +951,19 @@ function transformToClusterData(response) {
 function useHardcodedGraphQLResponse() {
   debugLog('Using hardcoded GraphQL response data');
   setStatus('Loading hardcoded GraphQL response data...', false);
+  
+  // Clear any existing visualization first
+  const graphContainer = document.getElementById('graph-container');
+  if (graphContainer) {
+    graphContainer.style.display = 'none';
+    graphContainer.innerHTML = '';
+  }
+  
+  // Clear the legend container
+  const legendContainer = document.getElementById('legend-container');
+  if (legendContainer) {
+    legendContainer.innerHTML = '';
+  }
   
   try {
     // This is the data structure from the graphQLResponse file
@@ -963,8 +1087,8 @@ function useHardcodedGraphQLResponse() {
     // Store in window.allGraphQLResponses
     window.allGraphQLResponses.push(hardcodedResponse);
     
-    // Transform to cluster data
-    const clusterData = transformToClusterData(hardcodedResponse);
+    // Transform to cluster data - don't pass a specific cluster ID since we're using hardcoded data
+    const clusterData = transformToClusterData(hardcodedResponse, null);
     
     if (clusterData) {
       debugLog('Successfully transformed hardcoded data to cluster format', clusterData);
@@ -992,6 +1116,19 @@ function loadSampleData() {
   debugLog('Attempting to load sample data');
   setStatus('Loading sample data...', false);
   
+  // Clear any existing visualization first
+  const graphContainer = document.getElementById('graph-container');
+  if (graphContainer) {
+    graphContainer.style.display = 'none';
+    graphContainer.innerHTML = '';
+  }
+  
+  // Clear the legend container
+  const legendContainer = document.getElementById('legend-container');
+  if (legendContainer) {
+    legendContainer.innerHTML = '';
+  }
+  
   // First check if we have any intercepted GraphQL data in the window.allGraphQLResponses array
   if (window.allGraphQLResponses && window.allGraphQLResponses.length > 0) {
     debugLog(`Found ${window.allGraphQLResponses.length} GraphQL responses in window.allGraphQLResponses`);
@@ -1000,7 +1137,8 @@ function loadSampleData() {
     for (const response of window.allGraphQLResponses) {
       try {
         debugLog('Checking response for cluster data:', response);
-        const clusterData = transformToClusterData(response);
+        // Don't pass a specific cluster ID here since we're looking for any valid cluster
+        const clusterData = transformToClusterData(response, null);
         if (clusterData) {
           debugLog('Successfully transformed intercepted data to cluster format');
           lastClusterData = clusterData;
@@ -1027,7 +1165,8 @@ function loadSampleData() {
   if (window.lastGraphQLResponse) {
     debugLog('Using intercepted GraphQL data from window.lastGraphQLResponse');
     try {
-      const clusterData = transformToClusterData(window.lastGraphQLResponse);
+      // Don't pass a specific cluster ID here since we're looking for any valid cluster
+      const clusterData = transformToClusterData(window.lastGraphQLResponse, null);
       if (clusterData) {
         debugLog('Successfully transformed intercepted data to cluster format');
         lastClusterData = clusterData;
@@ -1054,7 +1193,8 @@ function loadSampleData() {
       try {
         debugLog('Successfully loaded sample data', response.sampleData);
         
-        const clusterData = transformToClusterData(response.sampleData);
+        // Don't pass a specific cluster ID here since we're looking for any valid cluster
+        const clusterData = transformToClusterData(response.sampleData, null);
         if (clusterData) {
           debugLog('Successfully transformed sample data to cluster format');
           lastClusterData = clusterData;
@@ -1093,8 +1233,22 @@ function fetchAndVisualizeCluster() {
   debugLog('Fetching cluster data for ID:', clusterId);
   setStatus(`Fetching cluster data for ID: ${clusterId}...`, false);
   
+  // Clear any existing visualization first to prevent showing the old cluster
+  const graphContainer = document.getElementById('graph-container');
+  if (graphContainer) {
+    graphContainer.style.display = 'none';
+    graphContainer.innerHTML = '';
+  }
+  
+  // Clear the legend container
+  const legendContainer = document.getElementById('legend-container');
+  if (legendContainer) {
+    legendContainer.innerHTML = '';
+  }
+  
   // First check if we have any intercepted GraphQL data with getPersonClusterDetails
   let foundInterceptedData = false;
+  let clusterDataToVisualize = null;
   
   if (window.allGraphQLResponses && window.allGraphQLResponses.length > 0) {
     debugLog(`Checking ${window.allGraphQLResponses.length} intercepted responses for cluster data`);
@@ -1112,14 +1266,15 @@ function fetchAndVisualizeCluster() {
               item.variables.id === clusterId) {
             
             debugLog(`Found exact match for cluster ID ${clusterId} in intercepted data`);
-            const clusterData = transformToClusterData(response);
+            const clusterData = transformToClusterData(response, clusterId);
             if (clusterData) {
               foundInterceptedData = true;
-              visualizeCluster(clusterData);
-              return;
+              clusterDataToVisualize = clusterData;
+              break;
             }
           }
         }
+        if (foundInterceptedData) break;
       }
       
       // Check if it's a direct GraphQL response with the right cluster ID
@@ -1131,11 +1286,11 @@ function fetchAndVisualizeCluster() {
             response.data.prsn_deduplicationClusters.edges[0].node.id === clusterId) {
           
           debugLog(`Found exact match for cluster ID ${clusterId} in direct GraphQL response`);
-          const clusterData = transformToClusterData(response);
+          const clusterData = transformToClusterData(response, clusterId);
           if (clusterData) {
             foundInterceptedData = true;
-            visualizeCluster(clusterData);
-            return;
+            clusterDataToVisualize = clusterData;
+            break;
           }
         }
       } catch (e) {
@@ -1164,49 +1319,42 @@ function fetchAndVisualizeCluster() {
               }
               
               debugLog('Using modified getPersonClusterDetails with ID:', clusterId);
-              const clusterData = transformToClusterData(modifiedResponse);
+              const clusterData = transformToClusterData(modifiedResponse, clusterId);
               if (clusterData) {
                 // Override the ID with the user-entered ID
                 clusterData.id = clusterId;
                 foundInterceptedData = true;
-                visualizeCluster(clusterData);
-                return;
+                clusterDataToVisualize = clusterData;
+                break;
               }
             }
           }
+          if (foundInterceptedData) break;
         }
       }
     }
   }
   
-  // If no intercepted data found, try the background script
-  if (!foundInterceptedData) {
-    debugLog('No intercepted data found, trying background script');
-    chrome.runtime.sendMessage({
-      action: 'getClusterById',
-      clusterId
-    }, response => {
-      if (response && response.clusterData) {
-        debugLog('Found cluster data in background script', response.clusterData);
-        visualizeCluster(response.clusterData);
-      } else {
-        debugLog('No data found for cluster ID:', clusterId);
-        setStatus(`No data found for cluster ID: ${clusterId}. Please try another ID.`, true);
-        
-        // Hide the graph container if it's visible
-        const graphContainer = document.getElementById('graph-container');
-        if (graphContainer && graphContainer.style.display !== 'none') {
-          graphContainer.style.display = 'none';
-        }
-        
-        // Clear the legend container
-        const legendContainer = document.getElementById('legend-container');
-        if (legendContainer) {
-          legendContainer.innerHTML = '';
-        }
-      }
-    });
+  // If we found intercepted data, visualize it now
+  if (foundInterceptedData && clusterDataToVisualize) {
+    visualizeCluster(clusterDataToVisualize);
+    return;
   }
+  
+  // If no intercepted data found, try the background script
+  debugLog('No intercepted data found, trying background script');
+  chrome.runtime.sendMessage({
+    action: 'getClusterById',
+    clusterId
+  }, response => {
+    if (response && response.clusterData) {
+      debugLog('Found cluster data in background script', response.clusterData);
+      visualizeCluster(response.clusterData);
+    } else {
+      debugLog('No data found for cluster ID:', clusterId);
+      setStatus(`No data found for cluster ID: ${clusterId}. Please try another ID.`, true);
+    }
+  });
 }
 
 // Visualize cluster using D3
@@ -1214,6 +1362,24 @@ function visualizeCluster(data) {
   try {
     debugLog(`Visualizing cluster with ID: ${data.id}`);
     debugLog(`Cluster data:`, data);
+    
+    // First, ensure all previous visualization is completely cleared
+    const graphContainer = document.getElementById('graph-container');
+    if (!graphContainer) {
+      setStatus('Error: Graph container not found', true);
+      debugLog('Error: Graph container not found');
+      return;
+    }
+    
+    // Clear the graph container and hide it until we're ready to show the new visualization
+    graphContainer.style.display = 'none';
+    graphContainer.innerHTML = '';
+    
+    // Clear the legend container
+    const legendContainer = document.getElementById('legend-container');
+    if (legendContainer) {
+      legendContainer.innerHTML = '';
+    }
     
     // Validate data
     if (!data) {
@@ -1236,18 +1402,8 @@ function visualizeCluster(data) {
     
     setStatus(`Rendering cluster ${data.id}...`);
     
-    const graphContainer = document.getElementById('graph-container');
-    if (!graphContainer) {
-      setStatus('Error: Graph container not found', true);
-      debugLog('Error: Graph container not found');
-      return;
-    }
-    
     // Create static legend
-    const legendContainer = document.getElementById('legend-container');
     if (legendContainer) {
-      legendContainer.innerHTML = ''; // Clear previous legend
-      
       // Create legend items for each status color
       Object.entries(config.statusColors).forEach(([status, color]) => {
         const legendItem = document.createElement('div');
@@ -1265,9 +1421,6 @@ function visualizeCluster(data) {
         legendContainer.appendChild(legendItem);
       });
     }
-    
-    graphContainer.style.display = 'block';
-    graphContainer.innerHTML = ''; // Clear previous content
     
     // Check if D3 is available
     if (!window.d3) {
@@ -1497,6 +1650,9 @@ function visualizeCluster(data) {
       node.attr("transform", d => `translate(${d.x},${d.y})`);
     });
     
+    // Now that everything is set up, make the graph container visible
+    graphContainer.style.display = 'block';
+    
     setStatus(`Cluster ${data.id} visualized successfully`);
     debugLog(`Cluster ${data.id} visualization complete`);
   } catch (e) {
@@ -1524,11 +1680,26 @@ function autoVisualizeCurrentCluster() {
     const newClusterId = urlMatch[1];
     const clusterIdInput = document.getElementById('cluster-id');
     if (clusterIdInput) {
-      const currentClusterId = clusterIdInput.value;
-      if (newClusterId !== currentClusterId) {
-        clusterIdInput.value = newClusterId;
-        fetchAndVisualizeCluster();
+      // Always update the input value
+      clusterIdInput.value = newClusterId;
+      
+      // Clear any existing visualization first
+      const graphContainer = document.getElementById('graph-container');
+      if (graphContainer) {
+        graphContainer.style.display = 'none';
+        graphContainer.innerHTML = '';
       }
+      
+      // Clear the legend container
+      const legendContainer = document.getElementById('legend-container');
+      if (legendContainer) {
+        legendContainer.innerHTML = '';
+      }
+      
+      // Fetch and visualize with a small delay to ensure UI is cleared first
+      setTimeout(() => {
+        fetchAndVisualizeCluster();
+      }, 50);
     }
   }
 }
@@ -1679,6 +1850,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       createVisualizerUI();
     }
     
+    // Clear any existing visualization first
+    const graphContainer = document.getElementById('graph-container');
+    if (graphContainer) {
+      graphContainer.style.display = 'none';
+      graphContainer.innerHTML = '';
+    }
+    
+    // Clear the legend container
+    const legendContainer = document.getElementById('legend-container');
+    if (legendContainer) {
+      legendContainer.innerHTML = '';
+    }
+    
     // Update cluster ID input
     const clusterIdInput = document.getElementById('cluster-id');
     if (clusterIdInput) {
@@ -1686,9 +1870,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       clusterIdInput.value = lastClusterData.id;
     }
     
-    // Auto-visualize the cluster
+    // Auto-visualize the cluster with a small delay to ensure UI is cleared first
     debugLog('Auto-visualizing cluster');
-    visualizeCluster(lastClusterData);
+    setTimeout(() => {
+      visualizeCluster(lastClusterData);
+    }, 50);
     
     sendResponse({ success: true });
     return true; // Keep the message channel open for the async response
