@@ -582,7 +582,7 @@ function createVisualizerUI() {
   
   const container = document.createElement('div');
   container.id = 'cluster-visualizer';
-  container.style = 'position: fixed; top: 60px; right: 20px; z-index: 9999; background: #f0f0f0; color: #333333; padding: 10px; border-radius: 4px; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-family: Arial, sans-serif; max-height: 80vh; overflow: hidden; transition: all 0.3s ease; transform: translateX(105%); cursor: move;';
+  container.style = 'position: fixed; top: 60px; right: 20px; z-index: 9999; background: #f0f0f0; color: #333333; padding: 10px; border-radius: 4px; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-family: Arial, sans-serif; max-height: 80vh; overflow: hidden; transition: transform 0.3s ease; transform: translateX(105%); will-change: transform;';
 
   container.innerHTML = `
     <div id="visualizer-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: move;">
@@ -603,11 +603,20 @@ function createVisualizerUI() {
 
   // Show the visualizer (slide in from right)
   setTimeout(() => {
-    container.style.transform = 'translateX(0)';
+    container.style.transform = 'translate3d(0, 0, 0)';
   }, 100);
 
   document.getElementById('close-visualizer').addEventListener('click', () => {
-    container.style.transform = 'translateX(105%)';
+    // Reset position and hide
+    container.style.transition = originalTransition;
+    container.style.transform = 'translate3d(105%, 0, 0)';
+    container.style.top = '60px';
+    container.style.right = '20px';
+    container.style.left = 'auto';
+    
+    // Reset stored position
+    containerX = 0;
+    containerY = 60;
   });
   document.getElementById('minimize-visualizer').addEventListener('click', () => {
     const content = document.getElementById('visualizer-content');
@@ -624,14 +633,30 @@ function createVisualizerUI() {
   const header = document.getElementById('visualizer-header');
   let isDragging = false;
   let offsetX, offsetY;
+  let containerX = 0;
+  let containerY = 60; // Initial top position
+  let animationFrameId = null;
+  
+  // Store original transition
+  const originalTransition = container.style.transition;
 
   header.addEventListener('mousedown', (e) => {
     // Only handle left mouse button
     if (e.button !== 0) return;
     
     isDragging = true;
-    offsetX = e.clientX - container.getBoundingClientRect().left;
-    offsetY = e.clientY - container.getBoundingClientRect().top;
+    
+    // Get current position from transform or use stored values
+    const rect = container.getBoundingClientRect();
+    containerX = rect.left;
+    containerY = rect.top;
+    
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    
+    // Remove transition during drag for smoother movement
+    container.style.transition = 'none';
+    container.style.right = 'auto';
     
     // Prevent text selection during drag
     e.preventDefault();
@@ -640,29 +665,64 @@ function createVisualizerUI() {
   document.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
     
-    const x = e.clientX - offsetX;
-    const y = e.clientY - offsetY;
+    // Cancel any pending animation frame
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+    }
     
-    // Keep the container within the viewport
-    const maxX = window.innerWidth - container.offsetWidth;
-    const maxY = window.innerHeight - container.offsetHeight;
-    
-    const boundedX = Math.max(0, Math.min(x, maxX));
-    const boundedY = Math.max(0, Math.min(y, maxY));
-    
-    container.style.left = boundedX + 'px';
-    container.style.top = boundedY + 'px';
-    container.style.right = 'auto';
+    // Use requestAnimationFrame to optimize updates
+    animationFrameId = requestAnimationFrame(() => {
+      const x = e.clientX - offsetX;
+      const y = e.clientY - offsetY;
+      
+      // Keep the container within the viewport
+      const maxX = window.innerWidth - container.offsetWidth;
+      const maxY = window.innerHeight - container.offsetHeight;
+      
+      containerX = Math.max(0, Math.min(x, maxX));
+      containerY = Math.max(0, Math.min(y, maxY));
+      
+      // Use transform for hardware acceleration
+      container.style.transform = `translate3d(${containerX}px, ${containerY}px, 0)`;
+    });
   });
 
   document.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    
     isDragging = false;
+    
+    // Restore transition
+    container.style.transition = originalTransition;
+    
+    // Cancel any pending animation frame
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
   });
 
   // Add keyboard shortcut to show/hide (Ctrl+Shift+C)
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.shiftKey && e.key === 'C') {
-      container.style.transform = container.style.transform === 'translateX(0px)' ? 'translateX(105%)' : 'translateX(0)';
+      const isVisible = !container.style.transform.includes('105%');
+      
+      if (isVisible) {
+        // Hide
+        container.style.transition = originalTransition;
+        container.style.transform = 'translate3d(105%, 0, 0)';
+        container.style.top = '60px';
+        container.style.right = '20px';
+        container.style.left = 'auto';
+        
+        // Reset stored position
+        containerX = 0;
+        containerY = 60;
+      } else {
+        // Show
+        container.style.transition = originalTransition;
+        container.style.transform = 'translate3d(0, 0, 0)';
+      }
     }
   });
 
