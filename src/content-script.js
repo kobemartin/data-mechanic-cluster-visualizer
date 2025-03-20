@@ -1516,25 +1516,18 @@ function visualizeCluster(data) {
       .attr("stroke", "#333333")
       .attr("stroke-width", 1.5);
     
-    // Add a background rectangle for text - adjusted for single line name and ID
-    node.append("rect")
-      .attr("width", 90)
-      .attr("height", 30)
-      .attr("x", -45)
-      .attr("y", -10)
-      .attr("fill", "white")
-      .attr("opacity", 0.7)
-      .attr("rx", 5)
-      .attr("ry", 5);
+    // No background rectangle for text
     
-    // Add name text to nodes (more prominent) - no wrapping
+    // Add name text to nodes (more prominent) - no wrapping, with better contrast
     node.append("text")
       .attr("text-anchor", "middle")
       .attr("dy", "0em")
       .text(d => d.name || 'No name')
       .attr("font-size", "12px")
       .attr("font-weight", "bold")
-      .attr("fill", "#333333");
+      .attr("fill", "#000000")
+      .attr("stroke", "#ffffff")
+      .attr("stroke-width", "0.3px");
     
     // Add ID text to nodes (smaller, below name) - without "ID:" prefix
     node.append("text")
@@ -1542,7 +1535,7 @@ function visualizeCluster(data) {
       .attr("dy", "1.2em")
       .text(d => d.id)
       .attr("font-size", "10px")
-      .attr("fill", "#666666");
+      .attr("fill", "#333333");
     
     // Add drag behavior
     node.call(d3.drag()
