@@ -1483,13 +1483,14 @@ function visualizeCluster(data) {
     
     debugLog(`${validLinks.length} valid links after filtering`);
     
-    // Create a force simulation
+    // Create a force simulation - adjust for larger nodes
     const simulation = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(validLinks).id(d => d.id).distance(150))
-      .force("charge", d3.forceManyBody().strength(-400))
+      .force("link", d3.forceLink(validLinks).id(d => d.id).distance(200)) // Increased distance
+      .force("charge", d3.forceManyBody().strength(-600)) // Stronger repulsion
       .force("center", d3.forceCenter(width / 2, height / 2).strength(0.1))
       .force("x", d3.forceX(width / 2).strength(0.05))
       .force("y", d3.forceY(height / 2).strength(0.05))
+      .force("collision", d3.forceCollide().radius(45)) // Add collision detection
       .alphaDecay(0.028); // Slightly slower decay for smoother transitions
     
     // Create links
@@ -1508,32 +1509,40 @@ function visualizeCluster(data) {
       .data(nodes)
       .join("g");
     
-    // Add circles to nodes
+    // Add circles to nodes - make them larger
     node.append("circle")
-      .attr("r", 20)
+      .attr("r", 35)
       .attr("fill", "#e6f3ff")
       .attr("stroke", "#333333")
       .attr("stroke-width", 1.5);
     
-    // Add ID text to nodes
+    // Add a background rectangle for text - adjusted for single line name and ID
+    node.append("rect")
+      .attr("width", 90)
+      .attr("height", 30)
+      .attr("x", -45)
+      .attr("y", -10)
+      .attr("fill", "white")
+      .attr("opacity", 0.7)
+      .attr("rx", 5)
+      .attr("ry", 5);
+    
+    // Add name text to nodes (more prominent) - no wrapping
     node.append("text")
       .attr("text-anchor", "middle")
-      .attr("dy", "-0.5em")
-      .text(d => `ID: ${d.id}`)
-      .attr("font-size", "10px")
+      .attr("dy", "0em")
+      .text(d => d.name || 'No name')
+      .attr("font-size", "12px")
+      .attr("font-weight", "bold")
       .attr("fill", "#333333");
     
-    // Add name text to nodes
+    // Add ID text to nodes (smaller, below name) - without "ID:" prefix
     node.append("text")
       .attr("text-anchor", "middle")
-      .attr("dy", "0.8em")
-      .text(d => {
-        // Truncate long names
-        const name = d.name || 'No name';
-        return name.length > 15 ? name.substring(0, 12) + '...' : name;
-      })
+      .attr("dy", "1.2em")
+      .text(d => d.id)
       .attr("font-size", "10px")
-      .attr("fill", "#333333");
+      .attr("fill", "#666666");
     
     // Add drag behavior
     node.call(d3.drag()
@@ -1585,8 +1594,8 @@ function visualizeCluster(data) {
     
     // Constrain nodes to stay within the viewport
     function constrainNode(d) {
-      // Add padding to keep nodes fully visible
-      const padding = 30;
+      // Add padding to keep nodes fully visible - increased for larger nodes
+      const padding = 50;
       d.x = Math.max(padding, Math.min(width - padding, d.x));
       d.y = Math.max(padding, Math.min(height - padding, d.y));
       return d;
