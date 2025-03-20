@@ -18,11 +18,10 @@ const config = {
   ],
   // Status color mapping for visualization
   statusColors: {
-    'PENDING': '#FFA500',
-    'ACCEPTED': '#008000',
-    'REJECTED': '#FF0000',
-    'NEEDS_REVIEW': '#FFD700',
-    'UNKNOWN': '#800080'
+    'PENDING': '#FFA500',   // Orange
+    'DUPLICATE': '#FF0000', // Red
+    'UNIQUE': '#008000',    // Green
+    'INVALID': '#800080'    // Purple
   }
 };
 
@@ -601,6 +600,7 @@ function createVisualizerUI() {
         <button id="load-sample-btn" style="margin-left: 5px;">Load Sample</button>
       </div>
       <div id="status-message" style="color: #666; font-size: 12px;"></div>
+      <div id="legend-container" style="display: flex; flex-wrap: wrap; margin-top: 5px; margin-bottom: 5px;"></div>
       <div id="graph-container" style="width: 600px; height: 500px; overflow: auto; display: none; border: 1px solid #cccccc; margin-top: 10px; background: #ffffff;"></div>
     </div>
   `;
@@ -1521,6 +1521,29 @@ function visualizeCluster(data) {
       return;
     }
     
+    // Create static legend
+    const legendContainer = document.getElementById('legend-container');
+    if (legendContainer) {
+      legendContainer.innerHTML = ''; // Clear previous legend
+      
+      // Create legend items for each status color
+      Object.entries(config.statusColors).forEach(([status, color]) => {
+        const legendItem = document.createElement('div');
+        legendItem.style = `display: flex; align-items: center; margin-right: 15px; margin-bottom: 5px;`;
+        
+        const colorBox = document.createElement('div');
+        colorBox.style = `width: 15px; height: 15px; background-color: ${color}; margin-right: 5px;`;
+        
+        const statusText = document.createElement('span');
+        statusText.textContent = status;
+        statusText.style = `font-size: 12px; color: #333333;`;
+        
+        legendItem.appendChild(colorBox);
+        legendItem.appendChild(statusText);
+        legendContainer.appendChild(legendItem);
+      });
+    }
+    
     graphContainer.style.display = 'block';
     graphContainer.innerHTML = ''; // Clear previous content
     
@@ -1567,25 +1590,7 @@ function visualizeCluster(data) {
     // Create a container group for all visualization elements
     const container = svg.append("g");
     
-    // Create a legend
-    const legend = container.append("g")
-      .attr("transform", "translate(20, 20)");
-    
-    Object.entries(config.statusColors).forEach(([status, color], i) => {
-      legend.append("rect")
-        .attr("x", 0)
-        .attr("y", i * 20)
-        .attr("width", 15)
-        .attr("height", 15)
-        .attr("fill", color);
-      
-      legend.append("text")
-        .attr("x", 20)
-        .attr("y", i * 20 + 12)
-        .text(status)
-        .attr("font-size", "12px")
-        .attr("fill", "#333333");
-    });
+    // Note: Legend removed as requested, but edge colors are still maintained
     
     // Prepare data for D3
     const nodes = data.nodes.map(node => ({
