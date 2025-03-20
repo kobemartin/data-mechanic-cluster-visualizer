@@ -593,12 +593,6 @@ function createVisualizerUI() {
       </div>
     </div>
     <div id="visualizer-content">
-      <div style="margin-bottom: 10px;">
-        <label for="cluster-id">Cluster ID:</label>
-        <input type="text" id="cluster-id" style="margin-right: 5px;">
-        <button id="visualize-btn">Visualize</button>
-        <button id="load-sample-btn" style="margin-left: 5px;">Load Sample</button>
-      </div>
       <div id="status-message" style="color: #666; font-size: 12px;"></div>
       <div id="legend-container" style="display: flex; flex-wrap: wrap; margin-top: 5px; margin-bottom: 5px;"></div>
       <div id="graph-container" style="width: 600px; height: 500px; overflow: auto; display: none; border: 1px solid #cccccc; margin-top: 10px; background: #ffffff;"></div>
@@ -612,8 +606,6 @@ function createVisualizerUI() {
     container.style.transform = 'translateX(0)';
   }, 100);
 
-  document.getElementById('visualize-btn').addEventListener('click', fetchAndVisualizeCluster);
-  document.getElementById('load-sample-btn').addEventListener('click', loadSampleData);
   document.getElementById('close-visualizer').addEventListener('click', () => {
     container.style.transform = 'translateX(105%)';
   });
@@ -635,12 +627,6 @@ function createVisualizerUI() {
     }
   });
 
-  // Auto-populate cluster ID from URL
-  const urlMatch = window.location.href.match(/duplicates\/(\d+)/);
-  if (urlMatch && urlMatch[1]) {
-    document.getElementById('cluster-id').value = urlMatch[1];
-  }
-  
   // Add toggle button to the page
   addToggleButton();
   
@@ -1223,10 +1209,9 @@ function loadSampleData() {
 }
 
 // Fetch and visualize cluster by ID
-function fetchAndVisualizeCluster() {
-  const clusterId = document.getElementById('cluster-id').value;
+function fetchAndVisualizeCluster(clusterId) {
   if (!clusterId) {
-    setStatus('Please enter a cluster ID', true);
+    setStatus('No cluster ID provided', true);
     return;
   }
 
@@ -1659,29 +1644,24 @@ function autoVisualizeCurrentCluster() {
   const urlMatch = window.location.href.match(/duplicates\/(\d+)/);
   if (urlMatch && urlMatch[1]) {
     const newClusterId = urlMatch[1];
-    const clusterIdInput = document.getElementById('cluster-id');
-    if (clusterIdInput) {
-      // Always update the input value
-      clusterIdInput.value = newClusterId;
-      
-      // Clear any existing visualization first
-      const graphContainer = document.getElementById('graph-container');
-      if (graphContainer) {
-        graphContainer.style.display = 'none';
-        graphContainer.innerHTML = '';
-      }
-      
-      // Clear the legend container
-      const legendContainer = document.getElementById('legend-container');
-      if (legendContainer) {
-        legendContainer.innerHTML = '';
-      }
-      
-      // Fetch and visualize with a small delay to ensure UI is cleared first
-      setTimeout(() => {
-        fetchAndVisualizeCluster();
-      }, 50);
+    
+    // Clear any existing visualization first
+    const graphContainer = document.getElementById('graph-container');
+    if (graphContainer) {
+      graphContainer.style.display = 'none';
+      graphContainer.innerHTML = '';
     }
+    
+    // Clear the legend container
+    const legendContainer = document.getElementById('legend-container');
+    if (legendContainer) {
+      legendContainer.innerHTML = '';
+    }
+    
+    // Fetch and visualize with a small delay to ensure UI is cleared first
+    setTimeout(() => {
+      fetchAndVisualizeCluster(newClusterId);
+    }, 50);
   }
 }
 
@@ -1842,13 +1822,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const legendContainer = document.getElementById('legend-container');
     if (legendContainer) {
       legendContainer.innerHTML = '';
-    }
-    
-    // Update cluster ID input
-    const clusterIdInput = document.getElementById('cluster-id');
-    if (clusterIdInput) {
-      debugLog('Updating cluster ID input to:', lastClusterData.id);
-      clusterIdInput.value = lastClusterData.id;
     }
     
     // Auto-visualize the cluster with a small delay to ensure UI is cleared first
