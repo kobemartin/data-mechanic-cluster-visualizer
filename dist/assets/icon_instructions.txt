@@ -1,0 +1,21 @@
+Icon Instructions
+
+This extension requires the following icon files:
+
+1. icon16.png - 16x16 pixels
+2. icon48.png - 48x48 pixels
+3. icon128.png - 128x128 pixels
+4. icon16_off.png - 16x16 pixels (grayscale version)
+5. icon48_off.png - 48x48 pixels (grayscale version)
+6. icon128_off.png - 128x128 pixels (grayscale version)
+
+You can create these icons using any image editor like Photoshop, GIMP, or online tools.
+
+Suggested icon design:
+- A graph visualization with nodes and edges
+- Use bright colors for the active state
+- Use grayscale for the inactive state
+
+Once created, place the icon files in this directory (src/assets/).
+
+For a quick start, you can copy the icons from the existing cluster-visualizer-extension project.

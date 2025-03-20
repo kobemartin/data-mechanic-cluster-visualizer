@@ -1,0 +1,27 @@
+{
+  "name": "graphql-cluster-visualizer-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension for intercepting GraphQL requests and visualizing cluster data directly in the webpage",
+  "main": "index.js",
+  "scripts": {
+    "build": "mkdir -p dist && cp -r src/* dist/",
+    "watch": "nodemon --watch src --exec 'npm run build'",
+    "zip": "cd dist && zip -r ../graphql-cluster-visualizer-extension.zip *",
+    "download-deps": "mkdir -p src/assets && curl -L https://d3js.org/d3.v7.min.js -o src/assets/d3.v7.min.js && curl -L https://unpkg.com/@hpcc-js/wasm@1.16.1/dist/index.min.js -o src/assets/index.min.js && curl -L https://unpkg.com/d3-graphviz@4.4.0/build/d3-graphviz.js -o src/assets/d3-graphviz.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "graphql",
+    "visualization",
+    "cluster",
+    "d3"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "dependencies": {
+    "d3": "^7.8.5"
+  }
+}

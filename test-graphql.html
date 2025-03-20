@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphQL Test</title>
+</head>
+<body>
+    <h1>GraphQL Test Page</h1>
+    <button id="fetchButton">Make GraphQL Request</button>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('fetchButton').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Sending request...';
+            
+            try {
+                // This is a public GraphQL endpoint for testing
+                const response = await fetch('https://graphql-weather-api.herokuapp.com/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: `
+                            query {
+                                getCityByName(name: "San Francisco") {
+                                    id
+                                    name
+                                    country
+                                    weather {
+                                        temperature {
+                                            actual
+                                        }
+                                        summary {
+                                            description
+                                        }
+                                    }
+                                }
+                            }
+                        `
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('GraphQL Response:', data);
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.textContent = 'Error: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

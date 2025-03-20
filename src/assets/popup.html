@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GraphQL Cluster Visualizer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      width: 300px;
+      padding: 15px;
+      margin: 0;
+    }
+    h1 {
+      font-size: 18px;
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #333;
+    }
+    .status {
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .status.active {
+      background-color: #e6f7e6;
+      color: #2e7d32;
+    }
+    .status.inactive {
+      background-color: #ffebee;
+      color: #c62828;
+    }
+    button {
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #3367d6;
+    }
+    .cluster-info {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .cluster-id {
+      font-weight: bold;
+    }
+    .stats {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>GraphQL Cluster Visualizer</h1>
+  
+  <div id="status" class="status">
+    Checking status...
+  </div>
+  
+  <button id="toggle-visualizer">Show Visualizer</button>
+  <button id="clear-data">Clear Captured Data</button>
+  
+  <div id="cluster-info" class="cluster-info" style="display: none;">
+    <div>Last captured cluster: <span id="cluster-id" class="cluster-id">None</span></div>
+    <div class="stats">
+      <div>Nodes: <span id="node-count">0</span></div>
+      <div>Edges: <span id="edge-count">0</span></div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
