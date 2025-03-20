@@ -33,7 +33,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "https://datamechanic.netflixstudios.com/talent/duplicates/*",
+        "https://datamechanic.test.netflixstudios.com/talent/duplicates/*"
+      ],
       "js": [
         "content-script.js"
       ],
@@ -42,7 +45,10 @@
       "match_about_blank": true
     },
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "https://datamechanic.netflixstudios.com/talent/duplicates/*",
+        "https://datamechanic.test.netflixstudios.com/talent/duplicates/*"
+      ],
       "js": [
         "assets/lib/d3.v7.min.js",
         "assets/lib/index.min.js",
