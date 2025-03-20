@@ -1352,7 +1352,7 @@ function fetchAndVisualizeCluster() {
       visualizeCluster(response.clusterData);
     } else {
       debugLog('No data found for cluster ID:', clusterId);
-      setStatus(`No data found for cluster ID: ${clusterId}. Please try another ID.`, true);
+      setStatus(`Loading cluster ${clusterId}...`, false);
     }
   });
 }
