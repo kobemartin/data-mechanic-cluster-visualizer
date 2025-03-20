@@ -346,11 +346,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: false, error: e.message });
     }
   } else if (message.action === 'contentScriptLoaded') {
-    // Content script has loaded, update icon
+    // Content script has loaded
     console.log('Content script loaded in tab:', sender.tab ? sender.tab.id : 'unknown');
-    if (sender.tab) {
-      updateIcon(sender.tab.id, true);
-    }
     sendResponse({ success: true });
   } else {
     console.log('Unknown message action:', message.action);
@@ -360,18 +357,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Return true to indicate we'll respond asynchronously
   return true;
 });
-
-// Set icon state based on whether we're on a page with GraphQL
-function updateIcon(tabId, hasGraphQL) {
-  chrome.browserAction.setIcon({
-    path: {
-      '16': hasGraphQL ? 'assets/icon16.png' : 'assets/icon16_off.png',
-      '48': hasGraphQL ? 'assets/icon48.png' : 'assets/icon48_off.png',
-      '128': hasGraphQL ? 'assets/icon128.png' : 'assets/icon128_off.png'
-    },
-    tabId
-  });
-}
 
 // Initialize
 console.log('GraphQL Cluster Visualizer Extension background script loaded');
