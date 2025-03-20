@@ -595,7 +595,7 @@ function createVisualizerUI() {
     <div id="visualizer-content">
       <div id="status-message" style="color: #666; font-size: 12px;"></div>
       <div id="legend-container" style="display: flex; flex-wrap: wrap; margin-top: 5px; margin-bottom: 5px;"></div>
-      <div id="graph-container" style="width: 600px; height: 500px; overflow: auto; display: none; border: 1px solid #cccccc; margin-top: 10px; background: #ffffff;"></div>
+      <div id="graph-container" style="width: 600px; height: 500px; overflow: hidden; display: none; border: 1px solid #cccccc; margin-top: 10px; background: #ffffff;"></div>
     </div>
   `;
 
