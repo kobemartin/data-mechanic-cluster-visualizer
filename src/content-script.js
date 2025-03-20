@@ -766,16 +766,8 @@ function transformToClusterData(response) {
             }
             
             if (!clusterData) {
-              // Create a mock cluster data structure based on the request
-              clusterData = {
-                edges: [{
-                  node: {
-                    id: item.variables.id,
-                    edges: [],
-                    members: []
-                  }
-                }]
-              };
+              // No valid cluster data found
+              return null;
             }
             
             break;
@@ -800,45 +792,7 @@ function transformToClusterData(response) {
     
     if (!clusterData || !clusterData.edges || !clusterData.edges.length) {
       debugLog('No valid cluster data found in response');
-      
-      // If we have a cluster ID from the request, create mock data
-      let clusterId = '0';
-      if (response.action === 'captureResponseBody' &&
-          response.requestBody &&
-          Array.isArray(response.requestBody)) {
-        for (const item of response.requestBody) {
-          if (item.operationName === 'getPersonClusterDetails' &&
-              item.variables &&
-              item.variables.id) {
-            clusterId = item.variables.id;
-            break;
-          }
-        }
-      } else if (typeof response === 'object' && response !== null) {
-        // Try to extract cluster ID from other response formats
-        if (response.clusterId) {
-          clusterId = response.clusterId;
-        } else if (response.id) {
-          clusterId = response.id;
-        }
-      }
-      
-      // Create mock data
-      const mockClusterData = {
-        id: clusterId,
-        nodes: [
-          { person_id: `${clusterId}-1`, name: 'Person 1' },
-          { person_id: `${clusterId}-2`, name: 'Person 2' },
-          { person_id: `${clusterId}-3`, name: 'Person 3' }
-        ],
-        edges: [
-          { lower_person_id: `${clusterId}-1`, higher_person_id: `${clusterId}-2`, status: 'PENDING', sub_status_type: null, notes: 'Scores: Name=0.9, Email=0.8, Phone=0.7' },
-          { lower_person_id: `${clusterId}-2`, higher_person_id: `${clusterId}-3`, status: 'ACCEPTED', sub_status_type: null, notes: 'Scores: Name=0.95, Email=0.85, Phone=0.75' }
-        ]
-      };
-      
-      debugLog('Created mock cluster data with ID:', clusterId);
-      return mockClusterData;
+      return null;
     }
     
     // Get the first cluster
@@ -846,61 +800,13 @@ function transformToClusterData(response) {
     
     if (!cluster) {
       debugLog('Invalid cluster structure', cluster);
-      // Return mock data instead of null
-      const mockClusterData = {
-        id: '0',
-        nodes: [
-          { person_id: '0-1', name: 'Person 1' },
-          { person_id: '0-2', name: 'Person 2' },
-          { person_id: '0-3', name: 'Person 3' }
-        ],
-        edges: [
-          { lower_person_id: '0-1', higher_person_id: '0-2', status: 'PENDING', sub_status_type: null, notes: 'Scores: Name=0.9, Email=0.8, Phone=0.7' },
-          { lower_person_id: '0-2', higher_person_id: '0-3', status: 'ACCEPTED', sub_status_type: null, notes: 'Scores: Name=0.95, Email=0.85, Phone=0.75' }
-        ]
-      };
-      return mockClusterData;
+      return null;
     }
     
     // Handle case where cluster data might be in a different format
     if (!cluster.edges || !cluster.members) {
-      debugLog('Cluster data is in a different format, trying to adapt');
-      
-      // Create mock data based on the cluster ID
-      const clusterId = cluster.id || '0';
-      const mockNodes = [
-        { id: `${clusterId}-1`, name: 'Person 1' },
-        { id: `${clusterId}-2`, name: 'Person 2' },
-        { id: `${clusterId}-3`, name: 'Person 3' }
-      ];
-      
-      const mockEdges = [
-        { nodeA: { id: `${clusterId}-1` }, nodeB: { id: `${clusterId}-2` }, status: 'PENDING', subStatuses: [], vector: { nameScore: 0.9, emailScore: 0.8, phoneScore: 0.7 } },
-        { nodeA: { id: `${clusterId}-2` }, nodeB: { id: `${clusterId}-3` }, status: 'ACCEPTED', subStatuses: [], vector: { nameScore: 0.95, emailScore: 0.85, phoneScore: 0.75 } }
-      ];
-      
-      // Transform to the format expected by the visualizer
-      const nodes = mockNodes.map(node => ({
-        person_id: node.id,
-        name: node.name || 'No name'
-      }));
-      
-      const edges = mockEdges.map(edge => ({
-        lower_person_id: edge.nodeA.id,
-        higher_person_id: edge.nodeB.id,
-        status: edge.status,
-        sub_status_type: edge.subStatuses && edge.subStatuses.length > 0 ? edge.subStatuses[0] : null,
-        notes: edge.vector ? `Scores: Name=${edge.vector.nameScore}, Email=${edge.vector.emailScore}, Phone=${edge.vector.phoneScore}` : null
-      }));
-      
-      const result = {
-        id: clusterId,
-        nodes: nodes,
-        edges: edges
-      };
-      
-      debugLog('Created mock cluster data', result);
-      return result;
+      debugLog('Cluster data is in a different format, cannot adapt');
+      return null;
     }
     
     // Transform to the format expected by the visualizer
@@ -927,20 +833,7 @@ function transformToClusterData(response) {
     return result;
   } catch (e) {
     console.error('Error transforming GraphQL response to cluster data:', e);
-    // Return mock data instead of null
-    const mockClusterData = {
-      id: '0',
-      nodes: [
-        { person_id: '0-1', name: 'Person 1' },
-        { person_id: '0-2', name: 'Person 2' },
-        { person_id: '0-3', name: 'Person 3' }
-      ],
-      edges: [
-        { lower_person_id: '0-1', higher_person_id: '0-2', status: 'PENDING', sub_status_type: null, notes: 'Scores: Name=0.9, Email=0.8, Phone=0.7' },
-        { lower_person_id: '0-2', higher_person_id: '0-3', status: 'ACCEPTED', sub_status_type: null, notes: 'Scores: Name=0.95, Email=0.85, Phone=0.75' }
-      ]
-    };
-    return mockClusterData;
+    return null;
   }
 }
 // Use the hardcoded GraphQL response data from the graphQLResponse file
@@ -1297,144 +1190,19 @@ function fetchAndVisualizeCluster() {
         debugLog('Found cluster data in background script', response.clusterData);
         visualizeCluster(response.clusterData);
       } else {
-        debugLog('No data found in background script, using hardcoded data as last resort');
+        debugLog('No data found for cluster ID:', clusterId);
+        setStatus(`No data found for cluster ID: ${clusterId}. Please try another ID.`, true);
         
-        // Use the hardcoded data with the user's cluster ID as a last resort
-        try {
-          // This is the data structure from the graphQLResponse file
-          const hardcodedResponse = [
-            {
-              "data": {
-                "prsn_deduplicationClusters": {
-                  "edges": [
-                    {
-                      "cursor": "MA==",
-                      "node": {
-                        "id": clusterId, // Use the user-entered cluster ID
-                        "createdAt": "2024-10-06T20:24:07.098Z",
-                        "updatedAt": "2024-10-06T20:24:07.098Z",
-                        "reviewer": {
-                          "fullName": null,
-                          "userId": "",
-                          "primaryEmail": null,
-                          "__typename": "User"
-                        },
-                        "__typename": "PRSNDeduplicationCluster",
-                        "edges": [
-                          {
-                            "id": "3811161",
-                            "nodeA": {
-                              "id": "70022953",
-                              "name": "Person A",
-                              "displayArtwork": "",
-                              "active": true,
-                              "__typename": "Person"
-                            },
-                            "nodeB": {
-                              "id": "70107929",
-                              "name": "Person B",
-                              "displayArtwork": "",
-                              "active": true,
-                              "__typename": "Person"
-                            },
-                            "status": "PENDING",
-                            "subStatuses": [],
-                            "vector": {
-                              "ServiceScore": 0,
-                              "emailScore": 1,
-                              "nameScore": 0.90,
-                              "phoneScore": 0,
-                              "movieScore": 0,
-                              "__typename": "PRSNDeduplicationVector"
-                            },
-                            "vectorSum": 1.9,
-                            "__typename": "PRSNDeduplicationEdge"
-                          },
-                          {
-                            "id": "3813280",
-                            "nodeA": {
-                              "id": "70031591",
-                              "name": "Person C",
-                              "displayArtwork": "",
-                              "active": true,
-                              "__typename": "Person"
-                            },
-                            "nodeB": {
-                              "id": "70107929",
-                              "name": "Person B",
-                              "displayArtwork": "",
-                              "active": true,
-                              "__typename": "Person"
-                            },
-                            "status": "PENDING",
-                            "subStatuses": [],
-                            "vector": {
-                              "ServiceScore": 0,
-                              "emailScore": 0,
-                              "nameScore": 1,
-                              "phoneScore": 0,
-                              "movieScore": 0,
-                              "__typename": "PRSNDeduplicationVector"
-                            },
-                            "vectorSum": 1,
-                            "__typename": "PRSNDeduplicationEdge"
-                          }
-                        ],
-                        "members": [
-                          {
-                            "node": {
-                              "id": "70107929",
-                              "active": true,
-                              "name": "Person B",
-                              "__typename": "Person"
-                            },
-                            "__typename": "PRSNDeduplicationMember"
-                          },
-                          {
-                            "node": {
-                              "id": "70022953",
-                              "active": true,
-                              "name": "Person A",
-                              "__typename": "Person"
-                            },
-                            "__typename": "PRSNDeduplicationMember"
-                          },
-                          {
-                            "node": {
-                              "id": "70031591",
-                              "active": true,
-                              "name": "Person C",
-                              "__typename": "Person"
-                            },
-                            "__typename": "PRSNDeduplicationMember"
-                          }
-                        ]
-                      },
-                      "__typename": "DeduplicationClusterEdge"
-                    }
-                  ],
-                  "__typename": "DeduplicationClusterConnection"
-                }
-              }
-            }
-          ];
-          
-          // Transform to cluster data
-          const clusterData = transformToClusterData(hardcodedResponse);
-          
-          if (clusterData) {
-            // Override the ID with the user-entered ID
-            clusterData.id = clusterId;
-            
-            debugLog('Using hardcoded data with ID:', clusterId);
-            setStatus('Using sample data (no real data found)', false);
-            visualizeCluster(clusterData);
-          } else {
-            setStatus('Failed to create visualization data', true);
-          }
-        } catch (e) {
-          console.error('Error processing hardcoded data:', e);
-          setStatus('Error creating visualization: ' + e.message, true);
+        // Hide the graph container if it's visible
+        const graphContainer = document.getElementById('graph-container');
+        if (graphContainer && graphContainer.style.display !== 'none') {
+          graphContainer.style.display = 'none';
+        }
+        
+        // Clear the legend container
+        const legendContainer = document.getElementById('legend-container');
+        if (legendContainer) {
+          legendContainer.innerHTML = '';
         }
       }
     });
@@ -1451,65 +1219,19 @@ function visualizeCluster(data) {
     if (!data) {
       setStatus('Error: No data provided for visualization', true);
       debugLog('Error: No data provided for visualization');
-      
-      // Create mock data
-      data = {
-        id: '0',
-        nodes: [
-          { person_id: '0-1', name: 'Person 1' },
-          { person_id: '0-2', name: 'Person 2' },
-          { person_id: '0-3', name: 'Person 3' }
-        ],
-        edges: [
-          { lower_person_id: '0-1', higher_person_id: '0-2', status: 'PENDING', sub_status_type: null, notes: 'Scores: Name=0.9, Email=0.8, Phone=0.7' },
-          { lower_person_id: '0-2', higher_person_id: '0-3', status: 'ACCEPTED', sub_status_type: null, notes: 'Scores: Name=0.95, Email=0.85, Phone=0.75' }
-        ]
-      };
-      debugLog('Created mock data for visualization', data);
+      return;
     }
     
     if (!data.nodes || !Array.isArray(data.nodes) || data.nodes.length === 0) {
       setStatus(`Error: No nodes found in cluster data`, true);
       debugLog('Error: No nodes found in cluster data', data);
-      
-      // Create mock nodes
-      data.nodes = [
-        { person_id: `${data.id || '0'}-1`, name: 'Person 1' },
-        { person_id: `${data.id || '0'}-2`, name: 'Person 2' },
-        { person_id: `${data.id || '0'}-3`, name: 'Person 3' }
-      ];
-      debugLog('Created mock nodes for visualization', data.nodes);
+      return;
     }
     
     if (!data.edges || !Array.isArray(data.edges) || data.edges.length === 0) {
       setStatus(`Error: No edges found in cluster data`, true);
       debugLog('Error: No edges found in cluster data', data);
-      
-      // Create mock edges using the existing nodes
-      if (data.nodes && data.nodes.length >= 2) {
-        data.edges = [
-          {
-            lower_person_id: data.nodes[0].person_id,
-            higher_person_id: data.nodes[1].person_id,
-            status: 'PENDING',
-            sub_status_type: null,
-            notes: 'Scores: Name=0.9, Email=0.8, Phone=0.7'
-          }
-        ];
-        
-        // Add another edge if we have a third node
-        if (data.nodes.length >= 3) {
-          data.edges.push({
-            lower_person_id: data.nodes[1].person_id,
-            higher_person_id: data.nodes[2].person_id,
-            status: 'ACCEPTED',
-            sub_status_type: null,
-            notes: 'Scores: Name=0.95, Email=0.85, Phone=0.75'
-          });
-        }
-        
-        debugLog('Created mock edges for visualization', data.edges);
-      }
+      return;
     }
     
     setStatus(`Rendering cluster ${data.id}...`);
