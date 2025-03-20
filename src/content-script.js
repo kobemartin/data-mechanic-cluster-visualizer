@@ -1515,21 +1515,7 @@ function visualizeCluster(data) {
       .attr("stroke", d => config.statusColors[d.status?.toUpperCase()] || config.statusColors.UNKNOWN)
       .attr("stroke-width", 2);
     
-    // Create link labels
-    const linkText = container.append("g")
-      .selectAll("text")
-      .data(validLinks)
-      .join("text")
-      .attr("font-size", "10px")
-      .attr("text-anchor", "middle")
-      .attr("dy", "-5px")
-      .text(d => {
-        let text = d.status || '';
-        if (d.subStatus) text += ` (${d.subStatus})`;
-        return text;
-      })
-      .attr("fill", "#333333")
-      .attr("background", "white");
+    // No link text since we have colored edges
     
     // Create nodes
     const node = container.append("g")
@@ -1640,11 +1626,6 @@ function visualizeCluster(data) {
         .attr("y1", d => d.source.y)
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
-      
-      // Update link text positions
-      linkText
-        .attr("x", d => (d.source.x + d.target.x) / 2)
-        .attr("y", d => (d.source.y + d.target.y) / 2);
       
       // Update node positions
       node.attr("transform", d => `translate(${d.x},${d.y})`);
