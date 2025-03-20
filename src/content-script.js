@@ -582,10 +582,10 @@ function createVisualizerUI() {
   
   const container = document.createElement('div');
   container.id = 'cluster-visualizer';
-  container.style = 'position: fixed; top: 60px; right: 20px; z-index: 9999; background: #f0f0f0; color: #333333; padding: 10px; border-radius: 4px; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-family: Arial, sans-serif; max-height: 80vh; overflow: hidden; transition: all 0.3s ease; transform: translateX(105%);';
+  container.style = 'position: fixed; top: 60px; right: 20px; z-index: 9999; background: #f0f0f0; color: #333333; padding: 10px; border-radius: 4px; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-family: Arial, sans-serif; max-height: 80vh; overflow: hidden; transition: all 0.3s ease; transform: translateX(105%); cursor: move;';
 
   container.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <div id="visualizer-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: move;">
       <h3 style="margin: 0;">Cluster Visualizer</h3>
       <div>
         <button id="minimize-visualizer" style="background: none; border: none; cursor: pointer; margin-right: 5px;">_</button>
@@ -618,6 +618,45 @@ function createVisualizerUI() {
       content.style.display = 'none';
       container.style.height = '40px';
     }
+  });
+
+  // Make the container draggable
+  const header = document.getElementById('visualizer-header');
+  let isDragging = false;
+  let offsetX, offsetY;
+
+  header.addEventListener('mousedown', (e) => {
+    // Only handle left mouse button
+    if (e.button !== 0) return;
+    
+    isDragging = true;
+    offsetX = e.clientX - container.getBoundingClientRect().left;
+    offsetY = e.clientY - container.getBoundingClientRect().top;
+    
+    // Prevent text selection during drag
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    
+    const x = e.clientX - offsetX;
+    const y = e.clientY - offsetY;
+    
+    // Keep the container within the viewport
+    const maxX = window.innerWidth - container.offsetWidth;
+    const maxY = window.innerHeight - container.offsetHeight;
+    
+    const boundedX = Math.max(0, Math.min(x, maxX));
+    const boundedY = Math.max(0, Math.min(y, maxY));
+    
+    container.style.left = boundedX + 'px';
+    container.style.top = boundedY + 'px';
+    container.style.right = 'auto';
+  });
+
+  document.addEventListener('mouseup', () => {
+    isDragging = false;
   });
 
   // Add keyboard shortcut to show/hide (Ctrl+Shift+C)
